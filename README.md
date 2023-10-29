@@ -4,7 +4,7 @@ A simple monitoring app based on periodic pings to a HTTP endpoint. Sends a SNS 
 
 ## Endpoints
 
-The health-check application runs on port 8080 and there are two endpoints.
+The health-check application runs on port `8080` and there are two endpoints.
 
 - `/` - This endpoint listens for ping messages, which are `HTTP Post` requests.
 - `/reset` - This endpoint resets the alert.
