@@ -27,7 +27,7 @@ cd health-check
 go build -o ./app cmd/health-check/main.go
 
 # run the application
-./app -topic-arn <topic-arn>
+./app -topic-arn "<topic-arn>"
 ```
 
 ## Input Arguments
