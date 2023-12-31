@@ -4,18 +4,20 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sync/atomic"
 	"time"
 
 	"github.com/thilinajayanath/health-check/internal/notify"
 )
 
-var isAlerted bool
+var isAlerted atomic.Bool
 var alertTime time.Time
-var lastPingTime time.Time
+var lastPingTime atomic.Pointer[time.Time]
 
 func pingHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
-		lastPingTime = time.Now()
+		tNow := time.Now()
+		lastPingTime.Store(&tNow)
 		w.WriteHeader(http.StatusOK)
 	} else {
 		http.Error(w, fmt.Sprintf("Expecting a HTTP POST request. Received a HTTP %s request.", r.Method), http.StatusMethodNotAllowed)
@@ -24,8 +26,9 @@ func pingHandler(w http.ResponseWriter, r *http.Request) {
 
 func resetHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
-		isAlerted = false
-		lastPingTime = time.Now()
+		isAlerted.Store(false)
+		tNow := time.Now()
+		lastPingTime.Store(&tNow)
 		w.WriteHeader(http.StatusOK)
 		log.Println("Resetting the alert")
 	} else {
@@ -38,13 +41,14 @@ func alert(interval int, realert float64, threshold int, topicArn *string) {
 	defer tk.Stop()
 
 	for range tk.C {
-		if time.Since(lastPingTime).Minutes() > float64(time.Duration(interval)*time.Duration(threshold)) {
-			if !isAlerted {
-				notify.Notify(fmt.Sprintf("Alert! an issue with the health check. Time since the last ping: %v", time.Since(lastPingTime).Minutes()), topicArn)
+		if time.Since(*lastPingTime.Load()).Minutes() > float64(time.Duration(interval)*time.Duration(threshold)) {
+			if !isAlerted.Load() {
+				notify.Notify(fmt.Sprintf("Alert! an issue with the health check. Time since the last ping: %v", time.Since(*lastPingTime.Load()).Minutes()), topicArn)
+
 				alertTime = time.Now()
-				isAlerted = true
-			} else if isAlerted && (time.Since(alertTime).Minutes() > realert) {
-				notify.Notify(fmt.Sprintf("Alert! an issue with the health check. Time since the last ping: %v", time.Since(lastPingTime).Minutes()), topicArn)
+				isAlerted.Store(true)
+			} else if isAlerted.Load() && (time.Since(alertTime).Minutes() > realert) {
+				notify.Notify(fmt.Sprintf("Alert! an issue with the health check. Time since the last ping: %v", time.Since(*lastPingTime.Load()).Minutes()), topicArn)
 				alertTime = time.Now()
 			} else {
 				log.Printf("Already alerted at %v. Elapsed time %v\n", alertTime, time.Since(alertTime).Minutes())
@@ -54,8 +58,9 @@ func alert(interval int, realert float64, threshold int, topicArn *string) {
 }
 
 func HandleRequests(interval, realert, threshold int, topicArn *string) {
-	lastPingTime = time.Now()
-	isAlerted = false
+	pingTime := time.Now()
+	lastPingTime.Store(&pingTime)
+	isAlerted.Store(false)
 	http.HandleFunc("/", pingHandler)
 	http.HandleFunc("/reset", resetHandler)
 
