@@ -8,6 +8,25 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sns"
 )
 
+type snsPublishAPI interface {
+	Publish(ctx context.Context, params *sns.PublishInput, optFns ...func(*sns.Options)) (*sns.PublishOutput, error)
+}
+
+func publishMessage(ctx context.Context, api snsPublishAPI, message, topicArn *string) (*sns.PublishOutput, error) {
+	output, err := api.Publish(
+		ctx,
+		&sns.PublishInput{
+			Message:  message,
+			TopicArn: topicArn,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return output, nil
+}
+
 func Notify(msg string, topicArn *string) {
 	cfg, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
@@ -17,14 +36,16 @@ func Notify(msg string, topicArn *string) {
 
 	client := sns.NewFromConfig(cfg)
 
-	output, err := client.Publish(context.TODO(), &sns.PublishInput{
-		Message:  &msg,
-		TopicArn: topicArn,
-	})
+	msgOutput, err := publishMessage(
+		context.TODO(),
+		client,
+		&msg,
+		topicArn,
+	)
 	if err != nil {
 		log.Printf("An error occured when sending the SNS notification: %v\n", err)
 		return
 	}
 
-	log.Printf("Alerted. Message ID %s\n", *output.MessageId)
+	log.Printf("Alerted. Message ID %s\n", *msgOutput.MessageId)
 }
