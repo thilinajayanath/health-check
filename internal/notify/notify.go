@@ -12,6 +12,7 @@ func Notify(msg string, topicArn *string) {
 	cfg, err := config.LoadDefaultConfig(context.TODO())
 	if err != nil {
 		log.Printf("An error occured when loading AWS configurations: %v\n", err)
+		return
 	}
 
 	client := sns.NewFromConfig(cfg)
@@ -22,6 +23,7 @@ func Notify(msg string, topicArn *string) {
 	})
 	if err != nil {
 		log.Printf("An error occured when sending the SNS notification: %v\n", err)
+		return
 	}
 
 	log.Printf("Alerted. Message ID %s\n", *output.MessageId)
