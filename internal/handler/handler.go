@@ -43,15 +43,14 @@ func alert(interval int, realert float64, threshold int, topicArn *string) {
 	for range tk.C {
 		if time.Since(*lastPingTime.Load()).Minutes() > float64(time.Duration(interval)*time.Duration(threshold)) {
 			if !isAlerted.Load() {
-				notify.Notify(fmt.Sprintf("Alert! an issue with the health check. Time since the last ping: %v", time.Since(*lastPingTime.Load()).Minutes()), topicArn)
-
+				notify.Notify(fmt.Sprintf("Alert! an issue with the health check. Time since the last ping: %.2f minute(s)", time.Since(*lastPingTime.Load()).Minutes()), topicArn)
 				alertTime = time.Now()
 				isAlerted.Store(true)
 			} else if isAlerted.Load() && (time.Since(alertTime).Minutes() > realert) {
-				notify.Notify(fmt.Sprintf("Alert! an issue with the health check. Time since the last ping: %v", time.Since(*lastPingTime.Load()).Minutes()), topicArn)
+				notify.Notify(fmt.Sprintf("Alert! an issue with the health check. Time since the last ping: %.2f minute(s)", time.Since(*lastPingTime.Load()).Minutes()), topicArn)
 				alertTime = time.Now()
 			} else {
-				log.Printf("Already alerted at %v. Elapsed time %v\n", alertTime, time.Since(alertTime).Minutes())
+				log.Printf("Already alerted at %v. Elapsed time since last alert: %.2f minute(s)\n", alertTime, time.Since(alertTime).Minutes())
 			}
 		}
 	}

@@ -2,7 +2,9 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
+	"os"
 
 	"github.com/thilinajayanath/health-check/internal/handler"
 )
@@ -22,7 +24,8 @@ func main() {
 	interval, realert, threshold, topicArn := parseInput()
 
 	if *topicArn == "" {
-		log.Fatalln("ARN of the SNS topic is missing")
+		fmt.Println("ARN of the SNS topic is missing")
+		os.Exit(0)
 	}
 
 	log.Printf("Setting the time period between pings to %d minutes and the threshold to %d\n", interval, threshold)
